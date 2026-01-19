@@ -1,0 +1,26 @@
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Culori tematică Sims */
+:root {
+  --sims-blue: #4CAFDE;
+  --sims-green: #8BC34A;
+  --sims-orange: #FF9800;
+  --sims-pink: #E91E63;
+  --sims-purple: #9C27B0;
+  --sims-yellow: #FFC107;
+  --sims-dark: #2C3E50;
+  --sims-light: #ECF0F1;
+}
+

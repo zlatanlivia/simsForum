@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1768826621705,
+    "email": "a@gmail.com",
+    "username": "ana123",
+    "password": "ana123",
+    "role": "User",
+    "joinedDate": "2026-01-19T12:43:41.705Z"
+  },
+  {
+    "id": 1768827339331,
+    "email": "sims@example.com",
+    "username": "simsWorld",
+    "password": "Simsworld1!",
+    "role": "User",
+    "joinedDate": "2026-01-19T12:55:39.331Z"
+  }
+]

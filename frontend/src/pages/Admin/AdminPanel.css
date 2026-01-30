@@ -10,6 +10,14 @@
   margin-bottom: 2rem;
 }
 
+.admin-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
 .admin-header h1 {
   color: #2C3E50;
   margin-bottom: 0.5rem;
@@ -17,6 +25,7 @@
 
 .admin-header p {
   color: #666;
+  margin: 0;
 }
 
 .admin-stats {
@@ -108,9 +117,38 @@
   background-color: #f9f9f9;
 }
 
+.table-row.empty {
+  grid-template-columns: 1fr;
+}
+
+.col-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #999;
+  padding: 1.5rem;
+}
+
 .col-nickname {
   font-weight: 500;
   color: var(--sims-dark);
+}
+
+.user-profile-link {
+  color: #1565C0;
+  text-decoration: none;
+}
+
+.user-profile-link:hover {
+  text-decoration: underline;
+}
+
+.admin-author-link {
+  color: #1565C0;
+  text-decoration: none;
+}
+
+.admin-author-link:hover {
+  text-decoration: underline;
 }
 
 .col-email {
@@ -166,6 +204,56 @@
 .action-btn.delete:hover {
   background: #fee;
   border-color: #c33;
+}
+
+.admin-recent-list {
+  margin-top: 0.5rem;
+}
+
+.admin-recent-ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-recent-li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-recent-li:last-child {
+  border-bottom: none;
+}
+
+.admin-recent-link {
+  color: #1565C0;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.admin-recent-link:hover {
+  text-decoration: underline;
+}
+
+.admin-recent-meta {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.admin-recent-snippet {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0.5rem 0 0;
+  padding-left: 0.5rem;
+  border-left: 3px solid #e0e0e0;
+}
+
+.admin-recent-empty {
+  color: #999;
+  font-style: italic;
+  padding: 1rem 0;
 }
 
 .categories-management {

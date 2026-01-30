@@ -3,11 +3,11 @@
 }
 
 .forum-header {
-  background: white;
-  padding: 2rem;
+  background: #2C3E50;
+  padding: 1.5rem;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  margin-bottom: 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -16,12 +16,13 @@
 }
 
 .forum-header h1 {
-  color: #2C3E50;
+  color: white;
+  font-size: 1.8rem;
   margin-bottom: 0.5rem;
 }
 
 .forum-header p {
-  color: #666;
+  color: white;
   margin: 0;
 }
 
@@ -35,7 +36,7 @@
   background: white;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -67,7 +68,7 @@
 }
 
 .category-description {
-  color: #666;
+  color: #5a5959;
   margin-bottom: 0.5rem;
   line-height: 1.5;
 }
@@ -75,7 +76,7 @@
 .category-stats {
   display: flex;
   gap: 0.5rem;
-  color: #999;
+  color: #858585;
   font-size: 0.9rem;
   flex-wrap: wrap;
 }

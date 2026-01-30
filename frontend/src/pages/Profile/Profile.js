@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { authFetch } from '../../context/AuthContext';
 import './Profile.css';
+
+const API_URL = 'http://localhost:5001/api';
 
 // Achievements simulate pentru Sims
 const allAchievements = {
@@ -42,68 +45,55 @@ const allAchievements = {
   }
 };
 
-// Date simulate utilizatori
-const mockUsers = {
-  1: {
-    id: 1,
-    email: 'sims@example.com',
-    username: 'sims_player',
-    nickname: 'SimsFan2024',
-    role: 'User',
-    avatar: null,
-    joinedDate: '2024-01-01T10:00:00Z',
-    about: 'Fan Sims din 2014! Îmi place să construiesc case și să explorez toate expansion packs.',
-    achievements: [
-      { name: 'Primul mesaj', earnedAt: '2024-01-05T14:00:00Z' },
-      { name: 'Primul subiect', earnedAt: '2024-01-10T10:00:00Z' },
-      { name: 'Sims Veteran', earnedAt: '2024-01-12T16:30:00Z' }
-    ],
-    stats: {
-      topicsCreated: 5,
-      postsCreated: 23,
-      totalActivity: 28
-    }
-  }
-};
-
 const Profile = () => {
   const { userId } = useParams();
   const { user: currentUser } = useAuth();
   const [profileUser, setProfileUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editAbout, setEditAbout] = useState(profileUser?.about || '');
-  const [editNickname, setEditNickname] = useState(profileUser?.nickname || '');
-  const [editAvatar, setEditAvatar] = useState(profileUser?.avatar || '');
+  const [editAbout, setEditAbout] = useState('');
+  const [editNickname, setEditNickname] = useState('');
+  const [editAvatar, setEditAvatar] = useState('');
 
-  React.useEffect(() => {
-    if (!userId) return;
-
-    // Încercăm mai întâi utilizatorii mock
-    const mock = mockUsers[userId];
-    if (mock) {
-      setProfileUser(mock);
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
       return;
     }
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await authFetch(`${API_URL}/profile/${userId}`);
+        const data = await res.json();
+        if (res.ok && data.success && data.profile) {
+          const profile = data.profile;
+          setProfileUser({
+            ...profile,
+            recentTopics: Array.isArray(profile.recentTopics) ? profile.recentTopics : [],
+            recentPosts: Array.isArray(profile.recentPosts) ? profile.recentPosts : [],
+          });
+          setEditAbout(profile.about || '');
+          setEditNickname(profile.nickname || profile.username || '');
+          setEditAvatar(profile.avatar || '');
+        } else {
+          setProfileUser(null);
+        }
+      } catch (e) {
+        setProfileUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [userId]);
 
-    // Apoi verificăm utilizatorul logat
-    if (currentUser && currentUser.id?.toString() === userId) {
-      const enrichedUser = {
-        ...currentUser,
-        nickname:
-          currentUser.nickname ||
-          currentUser.username ||
-          (currentUser.email ? currentUser.email.split('@')[0] : ''),
-        achievements: currentUser.achievements || [],
-        stats:
-          currentUser.stats || {
-            topicsCreated: 0,
-            postsCreated: 0,
-            totalActivity: 0
-          }
-      };
-      setProfileUser(enrichedUser);
-    }
-  }, [userId, currentUser]);
+  if (loading) {
+    return (
+      <div className="profile-page">
+        <div className="profile-loading">Se încarcă profilul...</div>
+      </div>
+    );
+  }
 
   if (!profileUser) {
     return (
@@ -203,7 +193,7 @@ const Profile = () => {
           ) : (
             <>
               <h1 className="profile-name">
-                {profileUser.nickname}
+                {profileUser.nickname || profileUser.username}
                 {getRoleBadge(profileUser.role)}
               </h1>
               <p className="profile-username">@{profileUser.username}</p>
@@ -270,14 +260,41 @@ const Profile = () => {
         <div className="activity-section">
           <h2>Activitate recentă</h2>
           <div className="activity-list">
-            <div className="activity-item">
-              <Link to="/forum/topic/1">Noua actualizare Sims 4 - ce părere aveți?</Link>
-              <span className="activity-date">Acum 2 zile</span>
-            </div>
-            <div className="activity-item">
-              <Link to="/forum/topic/2">Cea mai bună casă pe care ați construit-o vreodată?</Link>
-              <span className="activity-date">Acum 5 zile</span>
-            </div>
+            {(() => {
+              const topics = (profileUser.recentTopics || []).map((t) => ({ type: 'topic', ...t }));
+              const posts = (profileUser.recentPosts || []).map((p) => ({ type: 'post', ...p }));
+              const merged = [...topics, ...posts].sort(
+                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+              ).slice(0, 20);
+              if (merged.length === 0) {
+                return (
+                  <p className="activity-empty">Nicio activitate încă.</p>
+                );
+              }
+              return merged.map((item) => (
+                <div key={item.type + '-' + item.id} className="activity-item">
+                  <div className="activity-row">
+                    {item.type === 'topic' ? (
+                      <>
+                        <span className="activity-type">Subiect:</span>
+                        <Link to={`/forum/topic/${item.id}`}>{item.title}</Link>
+                      </>
+                    ) : (
+                      <>
+                        <span className="activity-type">Răspuns la:</span>
+                        <Link to={`/forum/topic/${item.topicId}`}>
+                          {item.topicTitle || `Subiect #${item.topicId}`}
+                        </Link>
+                      </>
+                    )}
+                    <span className="activity-date">{formatDate(item.createdAt)}</span>
+                  </div>
+                  {item.type === 'post' && item.contentSnippet && (
+                    <p className="activity-snippet">{item.contentSnippet}</p>
+                  )}
+                </div>
+              ));
+            })()}
           </div>
         </div>
       </div>

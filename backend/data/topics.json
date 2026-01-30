@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1769783179711,
+    "categoryId": 1,
+    "title": "Ce faci mereu la începutul unui save nou?",
+    "authorId": 1769782848758,
+    "createdAt": "2026-01-30T14:26:19.711Z",
+    "lastActivity": "2026-01-30T14:29:42.183Z",
+    "pinned": false,
+    "closed": false,
+    "views": 36
+  },
+  {
+    "id": 1769784341582,
+    "categoryId": 1,
+    "title": "Ce moduri sau CC-uri folosiți cel mai des?",
+    "authorId": 1769783339061,
+    "createdAt": "2026-01-30T14:45:41.582Z",
+    "lastActivity": "2026-01-30T14:49:05.907Z",
+    "pinned": false,
+    "closed": false,
+    "views": 26
+  }
+]

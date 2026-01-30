@@ -14,5 +14,47 @@
     "password": "Simsworld1!",
     "role": "User",
     "joinedDate": "2026-01-19T12:55:39.331Z"
+  },
+  {
+    "id": 1769782848758,
+    "email": "liviazlatan672@gmail.com",
+    "username": "Livia",
+    "password": "$2b$10$I5VNZGiQkUx6yONNFTK.YeDc1oMY4pKpDIK9.n6cdJvkRgF2A8zw6",
+    "nickname": "Livia",
+    "role": "User",
+    "joinedDate": "2026-01-30T14:20:48.758Z",
+    "avatar": null,
+    "about": "",
+    "achievements": [
+      {
+        "name": "Primul mesaj",
+        "earnedAt": "2026-01-30T15:30:11.999Z"
+      },
+      {
+        "name": "Primul subiect",
+        "earnedAt": "2026-01-30T15:30:11.999Z"
+      }
+    ]
+  },
+  {
+    "id": 1769783339061,
+    "email": "zlatanlivia@gmail.com",
+    "username": "Dan1",
+    "password": "$2b$10$6pPIiuMxSALDsWE0Vfb/8ezz/CNa0hagdkdMMasdI56su5.YoYKEC",
+    "nickname": "Dan1",
+    "role": "User",
+    "joinedDate": "2026-01-30T14:28:59.061Z",
+    "avatar": null,
+    "about": "",
+    "achievements": [
+      {
+        "name": "Primul mesaj",
+        "earnedAt": "2026-01-30T15:30:38.481Z"
+      },
+      {
+        "name": "Primul subiect",
+        "earnedAt": "2026-01-30T15:30:38.481Z"
+      }
+    ]
   }
 ]

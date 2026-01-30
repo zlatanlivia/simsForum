@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "name": "Sims 4 - Discuții generale",
+    "description": "Discuții generale despre Sims 4",
+    "icon": "🏠"
+  },
+  {
+    "id": 2,
+    "name": "Sims 4 - DLC și Pachete",
+    "description": "Discutăm despre expansion packs, game packs și stuff packs",
+    "icon": "📦"
+  },
+  {
+    "id": 3,
+    "name": "Sims 4 - Building & Design",
+    "description": "Împărtășește-ți casele și obiectele personalizate",
+    "icon": "🏗️"
+  },
+  {
+    "id": 4,
+    "name": "Sims 4 - Gameplay & Challenges",
+    "description": "Sfaturi, trucuri și challenge-uri",
+    "icon": "🎮"
+  },
+  {
+    "id": 5,
+    "name": "Moduri și Custom Content",
+    "description": "Discuții despre mods și CC pentru Sims 4",
+    "icon": "✨"
+  },
+  {
+    "id": 6,
+    "name": "Sims clasic (Sims 1, 2, 3)",
+    "description": "Nostalgie pentru versiunile vechi ale jocului",
+    "icon": "💾"
+  }
+]

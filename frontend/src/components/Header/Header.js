@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
 const Header = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const displayName = user?.username || user?.nickname || (user?.email ? user.email.split('@')[0] : 'utilizator');
@@ -28,6 +28,9 @@ const Header = () => {
           {isAuthenticated ? (
             <>
               <div className="user-menu">
+                {isAdmin && (
+                  <Link to="/admin" className="nav-link">Admin</Link>
+                )}
                 <Link to={`/profile/${user.id}`} className="user-greeting">Bună, {displayName}!</Link>
                 <button onClick={handleLogout} className="logout-btn">
                   Ieșire

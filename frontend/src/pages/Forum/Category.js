@@ -1,65 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { authFetch } from '../../context/AuthContext';
 import './Category.css';
 
-// Date simulate pentru MVP
-const mockTopics = {
-  1: [
-    {
-      id: 1,
-      title: 'Noua actualizare Sims 4 - ce părere aveți?',
-      author: { id: 1, nickname: 'SimsFan2024', avatar: null },
-      replies: 23,
-      views: 145,
-      lastActivity: '2024-01-15T10:30:00Z',
-      pinned: true
-    },
-    {
-      id: 2,
-      title: 'Cea mai bună casă pe care ați construit-o vreodată?',
-      author: { id: 2, nickname: 'BuilderPro', avatar: null },
-      replies: 45,
-      views: 289,
-      lastActivity: '2024-01-15T09:15:00Z',
-      pinned: false
-    },
-    {
-      id: 3,
-      title: 'Help! Simulul meu nu vrea să mănânce',
-      author: { id: 3, nickname: 'NewSimmer', avatar: null },
-      replies: 8,
-      views: 67,
-      lastActivity: '2024-01-14T20:45:00Z',
-      pinned: false
-    }
-  ]
-};
-
-const categoryNames = {
-  1: 'Sims 4 - Discuții generale',
-  2: 'Sims 4 - DLC și Pachete',
-  3: 'Sims 4 - Building & Design',
-  4: 'Sims 4 - Gameplay & Challenges',
-  5: 'Moduri și Custom Content',
-  6: 'Sims clasic (Sims 1, 2, 3)'
-};
+const API_URL = 'http://localhost:5001/api';
 
 const Category = () => {
   const { categoryId } = useParams();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [topics, setTopics] = useState(mockTopics[categoryId] || []);
+  const [category, setCategory] = useState(null);
+  const [topics, setTopics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [newTopicTitle, setNewTopicTitle] = useState('');
   const [newTopicContent, setNewTopicContent] = useState('');
   const [showNewTopicForm, setShowNewTopicForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await authFetch(`${API_URL}/categories/${categoryId}/topics`);
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || 'Eroare la încărcarea subiectelor.');
+          return;
+        }
+        setCategory(data.category);
+        setTopics(data.topics || []);
+      } catch (e) {
+        setError('Eroare de conexiune la server.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [categoryId]);
 
   const formatDate = (dateString) => {
+    if (!dateString) return '—';
     const date = new Date(dateString);
     const now = new Date();
     const diff = now - date;
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    
     if (hours < 1) return 'Acum câteva minute';
     if (hours < 24) return `Acum ${hours} ${hours === 1 ? 'oră' : 'ore'}`;
     const days = Math.floor(hours / 24);
@@ -67,46 +52,75 @@ const Category = () => {
     return date.toLocaleDateString('ro-RO');
   };
 
-  const handleCreateTopic = (e) => {
+  const handleCreateTopic = async (e) => {
     e.preventDefault();
     if (!newTopicTitle.trim() || !newTopicContent.trim()) {
       alert('Te rugăm să completezi titlul și conținutul subiectului');
       return;
     }
-
-    const newTopic = {
-      id: Date.now(),
-      title: newTopicTitle,
-      author: { id: 1, nickname: 'Utilizator', avatar: null },
-      replies: 0,
-      views: 0,
-      lastActivity: new Date().toISOString(),
-      pinned: false
-    };
-
-    setTopics([newTopic, ...topics]);
-    setNewTopicTitle('');
-    setNewTopicContent('');
-    setShowNewTopicForm(false);
-    navigate(`/forum/topic/${newTopic.id}`);
+    setSubmitting(true);
+    try {
+      const response = await authFetch(`${API_URL}/categories/${categoryId}/topics`, {
+        method: 'POST',
+        body: JSON.stringify({ title: newTopicTitle.trim(), content: newTopicContent.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || 'Eroare la crearea subiectului.');
+        return;
+      }
+      setNewTopicTitle('');
+      setNewTopicContent('');
+      setShowNewTopicForm(false);
+      navigate(`/forum/topic/${data.topic.id}`);
+    } catch (e) {
+      alert('Eroare de conexiune.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const pinnedTopics = topics.filter(t => t.pinned);
-  const normalTopics = topics.filter(t => !t.pinned);
+  const pinnedTopics = topics.filter((t) => t.pinned);
+  const normalTopics = topics.filter((t) => !t.pinned);
+  const categoryName = category?.name || `Categoria ${categoryId}`;
+
+  if (loading) {
+    return (
+      <div className="category-page">
+        <div className="category-header">
+          <Link to="/forum" className="back-link">← Înapoi la forum</Link>
+          <h1>Se încarcă...</h1>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="category-page">
+        <div className="category-header">
+          <Link to="/forum" className="back-link">← Înapoi la forum</Link>
+          <p className="error-message">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="category-page">
       <div className="category-header">
         <Link to="/forum" className="back-link">← Înapoi la forum</Link>
-        <h1>{categoryNames[categoryId] || `Categoria ${categoryId}`}</h1>
-        {isAuthenticated && (
-          <button
-            onClick={() => setShowNewTopicForm(!showNewTopicForm)}
-            className="btn btn-primary"
-          >
-            {showNewTopicForm ? 'Anulează' : '+ Subiect nou'}
-          </button>
-        )}
+        <div className="category-header-row">
+          <h1>{categoryName}</h1>
+          {isAuthenticated && (
+            <button
+              onClick={() => setShowNewTopicForm(!showNewTopicForm)}
+              className="btn btn-primary"
+            >
+              {showNewTopicForm ? 'Anulează' : '+ Subiect nou'}
+            </button>
+          )}
+        </div>
       </div>
 
       {showNewTopicForm && (
@@ -127,8 +141,8 @@ const Category = () => {
               rows="6"
               required
             />
-            <button type="submit" className="btn btn-primary">
-              Creează subiect
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Se creează...' : 'Creează subiect'}
             </button>
           </form>
         </div>
@@ -144,7 +158,7 @@ const Category = () => {
 
         {pinnedTopics.length > 0 && (
           <div className="topics-section">
-            <div className="section-title">📌 Subiecte fixate</div>
+            <div className="section-title">Subiecte fixate</div>
             {pinnedTopics.map((topic) => (
               <Link
                 key={topic.id}
@@ -156,13 +170,13 @@ const Category = () => {
                   {topic.title}
                 </div>
                 <div className="col-author">
-                  <Link to={`/profile/${topic.author.id}`} onClick={(e) => e.stopPropagation()}>
-                    {topic.author.nickname}
+                  <Link to={`/profile/${topic.author?.id}`} onClick={(e) => e.stopPropagation()}>
+                    {topic.author?.nickname || 'Utilizator'}
                   </Link>
                 </div>
                 <div className="col-stats">
-                  <span>{topic.replies} răspunsuri</span>
-                  <span className="views">{topic.views} vizualizări</span>
+                  <span>{topic.replies ?? 0} răspunsuri</span>
+                  <span className="views">{topic.views ?? 0} vizualizări</span>
                 </div>
                 <div className="col-activity">{formatDate(topic.lastActivity)}</div>
               </Link>
@@ -183,13 +197,13 @@ const Category = () => {
               >
                 <div className="col-title">{topic.title}</div>
                 <div className="col-author">
-                  <Link to={`/profile/${topic.author.id}`} onClick={(e) => e.stopPropagation()}>
-                    {topic.author.nickname}
+                  <Link to={`/profile/${topic.author?.id}`} onClick={(e) => e.stopPropagation()}>
+                    {topic.author?.nickname || 'Utilizator'}
                   </Link>
                 </div>
                 <div className="col-stats">
-                  <span>{topic.replies} răspunsuri</span>
-                  <span className="views">{topic.views} vizualizări</span>
+                  <span>{topic.replies ?? 0} răspunsuri</span>
+                  <span className="views">{topic.views ?? 0} vizualizări</span>
                 </div>
                 <div className="col-activity">{formatDate(topic.lastActivity)}</div>
               </Link>
@@ -202,4 +216,3 @@ const Category = () => {
 };
 
 export default Category;
-

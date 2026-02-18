@@ -47,13 +47,15 @@ const allAchievements = {
 
 const Profile = () => {
   const { userId } = useParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateUser } = useAuth();
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editAbout, setEditAbout] = useState('');
   const [editNickname, setEditNickname] = useState('');
   const [editAvatar, setEditAvatar] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (!userId) {
@@ -120,15 +122,43 @@ const Profile = () => {
   };
 
   const handleSaveProfile = () => {
-    const updatedUser = {
-      ...profileUser,
+    setSaveError('');
+    setSaving(true);
+
+    const payload = {
       nickname: editNickname,
       about: editAbout,
-      avatar: editAvatar
+      avatar: editAvatar,
     };
-    setProfileUser(updatedUser);
-    setIsEditing(false);
-    // TODO: Salvare în backend
+
+    authFetch(`${API_URL}/profile`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok || !data.success || !data.user) {
+          throw new Error(data.error || 'Eroare la salvarea profilului.');
+        }
+        const updatedUser = {
+          ...profileUser,
+          nickname: data.user.nickname,
+          about: data.user.about,
+          avatar: data.user.avatar,
+          role: data.user.role || profileUser.role,
+        };
+        setProfileUser(updatedUser);
+        if (isOwnProfile && updateUser) {
+          updateUser(data.user);
+        }
+        setIsEditing(false);
+      })
+      .catch((e) => {
+        setSaveError(e.message || 'Eroare la salvarea profilului.');
+      })
+      .finally(() => {
+        setSaving(false);
+      });
   };
 
   const getRoleBadge = (role) => {
@@ -181,9 +211,10 @@ const Profile = () => {
                 rows="4"
                 className="edit-textarea"
               />
+              {saveError && <div className="error-message">{saveError}</div>}
               <div className="edit-actions">
-                <button onClick={handleSaveProfile} className="btn btn-primary">
-                  Salvează
+                <button onClick={handleSaveProfile} className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Se salvează...' : 'Salvează'}
                 </button>
                 <button onClick={() => setIsEditing(false)} className="btn btn-secondary">
                   Anulează

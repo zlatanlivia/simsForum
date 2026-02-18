@@ -11,8 +11,8 @@
     "id": 1768827339331,
     "email": "sims@example.com",
     "username": "simsWorld",
-    "password": "Simsworld1!",
-    "role": "User",
+    "password": "$2b$10$abZy7ewb4wKuExQXdiPzTedygfMH7JSNkHmWWSB7Uu5Zq/RLxjaaC",
+    "role": "Admin",
     "joinedDate": "2026-01-19T12:55:39.331Z"
   },
   {

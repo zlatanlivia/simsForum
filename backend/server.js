@@ -343,6 +343,8 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
+const isModeratorOrAdmin = (user) => user && (user.role === 'Moderator' || user.role === 'Admin');
+
 // Statistici admin (același calcul, pentru panou)
 app.get('/api/admin/stats', authMiddleware, adminOnly, (req, res) => {
   const users = loadUsers();
@@ -423,6 +425,53 @@ app.get('/api/admin/recent', authMiddleware, adminOnly, (req, res) => {
   return res.json({ success: true, recentTopics, recentPosts });
 });
 
+// Schimbare rol utilizator (admin)
+app.patch('/api/admin/users/:userId/role', authMiddleware, adminOnly, (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+
+  const allowedRoles = ['User', 'Moderator', 'Admin'];
+  if (!allowedRoles.includes(role)) {
+    return res.status(400).json({ success: false, error: 'Rol invalid.' });
+  }
+
+  const users = loadUsers();
+  const user = users.find((u) => String(u.id) === String(userId));
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'Utilizatorul nu a fost găsit.' });
+  }
+
+  user.role = role;
+  saveUsers(users);
+  return res.json({ success: true, user: toSafeUser(user) });
+});
+
+// Ștergere utilizator (admin)
+app.delete('/api/admin/users/:userId', authMiddleware, adminOnly, (req, res) => {
+  const { userId } = req.params;
+  const users = loadUsers();
+  const index = users.findIndex((u) => String(u.id) === String(userId));
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, error: 'Utilizatorul nu a fost găsit.' });
+  }
+
+  const userToDelete = users[index];
+
+  // Nu permitem unui admin să își șteargă propriul cont din panou
+  if (userToDelete.id === req.user.id) {
+    return res.status(400).json({
+      success: false,
+      error: 'Nu îți poți șterge propriul cont din panoul de administrare.',
+    });
+  }
+
+  users.splice(index, 1);
+  saveUsers(users);
+
+  return res.json({ success: true });
+});
+
 // --- Forum: Categorii ---
 app.get('/api/categories', (req, res) => {
   const categories = loadCategories();
@@ -444,6 +493,36 @@ app.get('/api/categories', (req, res) => {
     };
   });
   return res.json({ success: true, categories: list });
+});
+
+// Creare categorie nouă (admin)
+app.post('/api/admin/categories', authMiddleware, adminOnly, (req, res) => {
+  const { name, description, icon } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, error: 'Numele categoriei este obligatoriu.' });
+  }
+
+  const categories = loadCategories();
+  const trimmedName = name.trim();
+  const exists = categories.find(
+    (c) => c.name.toLowerCase() === trimmedName.toLowerCase()
+  );
+  if (exists) {
+    return res.status(409).json({ success: false, error: 'Există deja o categorie cu acest nume.' });
+  }
+
+  const maxId = categories.reduce((max, c) => (c.id > max ? c.id : max), 0);
+  const newCategory = {
+    id: maxId + 1,
+    name: trimmedName,
+    description: (description || '').trim(),
+    icon: icon || '📁',
+  };
+
+  const updated = [...categories, newCategory];
+  saveJson(CATEGORIES_FILE, updated);
+
+  return res.status(201).json({ success: true, category: newCategory });
 });
 
 // --- Forum: Subiecte pe categorie (cu paginare) ---
@@ -613,6 +692,84 @@ app.get('/api/topics/:topicId', optionalAuth, (req, res) => {
   });
 });
 
+// Editare subiect (titlu, pinned/closed)
+app.patch('/api/topics/:topicId', authMiddleware, (req, res) => {
+  const { topicId } = req.params;
+  const { title, pinned, closed } = req.body;
+  const topics = loadTopics();
+  const topic = topics.find((t) => t.id === parseInt(topicId, 10));
+  if (!topic) {
+    return res.status(404).json({ success: false, error: 'Subiectul nu există.' });
+  }
+
+  const user = req.user;
+  const isOwner = topic.authorId === user.id;
+  const isMod = isModeratorOrAdmin(user);
+
+  if (title !== undefined) {
+    if (!isOwner && !isMod) {
+      return res.status(403).json({ success: false, error: 'Nu ai dreptul să editezi acest subiect.' });
+    }
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Titlul nu poate fi gol.' });
+    }
+    topic.title = title.trim();
+  }
+
+  if (pinned !== undefined || closed !== undefined) {
+    if (!isMod) {
+      return res.status(403).json({ success: false, error: 'Doar moderatorii sau administratorii pot modifica starea subiectului.' });
+    }
+    if (pinned !== undefined) {
+      topic.pinned = !!pinned;
+    }
+    if (closed !== undefined) {
+      topic.closed = !!closed;
+    }
+  }
+
+  saveJson(TOPICS_FILE, topics);
+  return res.json({
+    success: true,
+    topic: {
+      id: topic.id,
+      title: topic.title,
+      categoryId: topic.categoryId,
+      pinned: !!topic.pinned,
+      closed: !!topic.closed,
+      views: topic.views || 0,
+    },
+  });
+});
+
+// Ștergere subiect (autor sau Moderator/Admin)
+app.delete('/api/topics/:topicId', authMiddleware, (req, res) => {
+  const { topicId } = req.params;
+  const topics = loadTopics();
+  const topicIndex = topics.findIndex((t) => t.id === parseInt(topicId, 10));
+  if (topicIndex === -1) {
+    return res.status(404).json({ success: false, error: 'Subiectul nu există.' });
+  }
+
+  const topic = topics[topicIndex];
+  const user = req.user;
+  const isOwner = topic.authorId === user.id;
+  const isMod = isModeratorOrAdmin(user);
+
+  if (!isOwner && !isMod) {
+    return res.status(403).json({ success: false, error: 'Nu ai dreptul să ștergi acest subiect.' });
+  }
+
+  const posts = loadPosts();
+  const remainingPosts = posts.filter((p) => p.topicId !== topic.id);
+
+  topics.splice(topicIndex, 1);
+  saveJson(TOPICS_FILE, topics);
+  saveJson(POSTS_FILE, remainingPosts);
+
+  return res.json({ success: true });
+});
+
 // Răspuns la subiect (autentificat)
 app.post('/api/topics/:topicId/posts', authMiddleware, (req, res) => {
   const { topicId } = req.params;
@@ -665,7 +822,7 @@ app.patch('/api/topics/:topicId/posts/:postId', authMiddleware, (req, res) => {
   const { topicId, postId } = req.params;
   const { content } = req.body;
   const user = req.user;
-  const isModerator = user.role === 'Moderator' || user.role === 'Admin';
+  const isModerator = isModeratorOrAdmin(user);
 
   if (!content || !content.trim()) {
     return res.status(400).json({ success: false, error: 'Conținutul nu poate fi gol.' });
@@ -701,7 +858,7 @@ app.patch('/api/topics/:topicId/posts/:postId', authMiddleware, (req, res) => {
 app.delete('/api/topics/:topicId/posts/:postId', authMiddleware, (req, res) => {
   const { topicId, postId } = req.params;
   const user = req.user;
-  const isModerator = user.role === 'Moderator' || user.role === 'Admin';
+  const isModerator = isModeratorOrAdmin(user);
 
   const posts = loadPosts();
   const index = posts.findIndex((p) => p.topicId === parseInt(topicId, 10) && p.id === parseInt(postId, 10));
@@ -716,6 +873,30 @@ app.delete('/api/topics/:topicId/posts/:postId', authMiddleware, (req, res) => {
   posts.splice(index, 1);
   saveJson(POSTS_FILE, posts);
   return res.json({ success: true });
+});
+
+// Actualizare profil utilizator (nickname, avatar, about)
+app.patch('/api/profile', authMiddleware, (req, res) => {
+  const { nickname, avatar, about } = req.body;
+
+  const users = loadUsers();
+  const user = users.find((u) => u.id === req.user.id);
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'Utilizatorul nu a fost găsit.' });
+  }
+
+  if (nickname !== undefined) {
+    user.nickname = (nickname || '').toString().trim().slice(0, 50);
+  }
+  if (avatar !== undefined) {
+    user.avatar = (avatar || '').toString().trim().slice(0, 500);
+  }
+  if (about !== undefined) {
+    user.about = (about || '').toString().trim().slice(0, 1000);
+  }
+
+  saveUsers(users);
+  return res.json({ success: true, user: toSafeUser(user) });
 });
 
 // --- Inițializare date forum dacă lipsesc ---

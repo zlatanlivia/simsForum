@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { authFetch } from '../../context/AuthContext';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import './AdminPanel.css';
 
 const API_URL = 'http://localhost:5001/api';
@@ -25,6 +25,12 @@ const AdminPanel = () => {
   const [recentPosts, setRecentPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [savingRoleUserId, setSavingRoleUserId] = useState(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryDescription, setCategoryDescription] = useState('');
+  const [categoryIcon, setCategoryIcon] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const navigate = useNavigate();
 
   const loadAdminData = async () => {
     try {
@@ -64,6 +70,79 @@ const AdminPanel = () => {
   }
 
   const displayName = user.nickname || user.username || (user.email ? user.email.split('@')[0] : 'Admin');
+
+  const handleChangeUserRole = async (userId, newRole) => {
+    setSavingRoleUserId(userId);
+    try {
+      const res = await authFetch(`${API_URL}/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.user) {
+        alert(data.error || 'Eroare la schimbarea rolului utilizatorului.');
+        return;
+      }
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: data.user.role } : u))
+      );
+    } catch (e) {
+      alert('Eroare de conexiune la server.');
+    } finally {
+      setSavingRoleUserId(null);
+    }
+  };
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!categoryName.trim()) {
+      alert('Te rugăm să introduci numele secțiunii.');
+      return;
+    }
+    setCreatingCategory(true);
+    try {
+      const res = await authFetch(`${API_URL}/admin/categories`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: categoryName.trim(),
+          description: categoryDescription.trim(),
+          icon: categoryIcon.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || 'Eroare la crearea secțiunii.');
+        return;
+      }
+      setCategoryName('');
+      setCategoryDescription('');
+      setCategoryIcon('');
+      alert('Secțiune creată cu succes. O vei vedea în lista de categorii din pagina de forum.');
+    } catch (e) {
+      alert('Eroare de conexiune la server.');
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Sigur vrei să ștergi acest utilizator? Conținutul lui va rămâne în forum ca „Utilizator”.')) {
+      return;
+    }
+    try {
+      const res = await authFetch(`${API_URL}/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        alert((data && data.error) || 'Eroare la ștergerea utilizatorului.');
+        return;
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (e) {
+      alert('Eroare de conexiune la server.');
+    }
+  };
 
   if (loading) {
     return (
@@ -157,7 +236,12 @@ const AdminPanel = () => {
                   </div>
                   <div className="col-email">{u.email}</div>
                   <div className="col-role">
-                    <select defaultValue={u.role} className="role-select" disabled title="Modificarea rolului va fi implementată în backend.">
+                    <select
+                      value={u.role}
+                      className="role-select"
+                      disabled={savingRoleUserId === u.id}
+                      onChange={(e) => handleChangeUserRole(u.id, e.target.value)}
+                    >
                       <option value="User">User</option>
                       <option value="Moderator">Moderator</option>
                       <option value="Admin">Admin</option>
@@ -165,8 +249,13 @@ const AdminPanel = () => {
                   </div>
                   <div className="col-joined">{u.joined || '—'}</div>
                   <div className="col-actions">
-                    <button className="action-btn" disabled title="În curând">Editează</button>
-                    <button className="action-btn delete" disabled title="În curând">Șterge</button>
+                    <button
+                      type="button"
+                      className="action-btn delete"
+                      onClick={() => handleDeleteUser(u.id)}
+                    >
+                      Șterge
+                    </button>
                   </div>
                 </div>
               ))
@@ -225,9 +314,38 @@ const AdminPanel = () => {
         <div className="admin-section">
           <h2>Gestionare secțiuni</h2>
           <div className="categories-management">
-            <button className="btn btn-primary" disabled title="În curând">+ Adaugă secțiune nouă</button>
+            <form className="new-category-form" onSubmit={handleCreateCategory}>
+              <div className="form-row">
+                <input
+                  type="text"
+                  placeholder="Nume secțiune (ex: Sims 4 - Challenges)"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-row">
+                <input
+                  type="text"
+                  placeholder="Descriere (opțional)"
+                  value={categoryDescription}
+                  onChange={(e) => setCategoryDescription(e.target.value)}
+                />
+              </div>
+              <div className="form-row">
+                <input
+                  type="text"
+                  placeholder="Icon (emoji, ex: 🎮) – opțional"
+                  value={categoryIcon}
+                  onChange={(e) => setCategoryIcon(e.target.value)}
+                />
+              </div>
+              <button className="btn btn-primary" type="submit" disabled={creatingCategory}>
+                {creatingCategory ? 'Se creează...' : '+ Adaugă secțiune nouă'}
+              </button>
+            </form>
             <p className="note">
-              Statisticile, utilizatorii și activitatea recentă sunt afișate din API. Modificarea rolurilor și gestionarea secțiunilor pot fi adăugate ulterior.
+              Noile secțiuni apar automat pe pagina principală a forumului, în lista de categorii.
             </p>
           </div>
         </div>

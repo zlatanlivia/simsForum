@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authFetch } from '../../context/AuthContext';
 import './Topic.css';
@@ -8,6 +8,7 @@ const API_URL = 'http://localhost:5001/api';
 
 const Topic = () => {
   const { topicId } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated, isModerator } = useAuth();
   const [topic, setTopic] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -17,10 +18,12 @@ const Topic = () => {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
-  const loadTopic = async () => {
+  const loadTopic = async (pageToLoad = 1) => {
     try {
-      const response = await authFetch(`${API_URL}/topics/${topicId}`);
+      const response = await authFetch(`${API_URL}/topics/${topicId}?page=${pageToLoad}`);
       const data = await response.json();
       if (!response.ok) {
         setError(data.error || 'Eroare la încărcarea subiectului.');
@@ -28,6 +31,7 @@ const Topic = () => {
       }
       setTopic(data.topic);
       setPosts(data.posts || []);
+      setPagination(data.pagination || null);
     } catch (e) {
       setError('Eroare de conexiune la server.');
     } finally {
@@ -36,8 +40,9 @@ const Topic = () => {
   };
 
   useEffect(() => {
-    loadTopic();
-  }, [topicId]);
+    setLoading(true);
+    loadTopic(page);
+  }, [topicId, page]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';
@@ -141,6 +146,66 @@ const Topic = () => {
     return null;
   };
 
+  const handleToggleClosed = async () => {
+    if (!topic) return;
+    try {
+      const response = await authFetch(`${API_URL}/topics/${topicId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ closed: !topic.closed }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.error || 'Eroare la schimbarea stării subiectului.');
+        return;
+      }
+      setTopic((prev) => (prev ? { ...prev, closed: !prev.closed } : prev));
+    } catch (e) {
+      alert('Eroare de conexiune.');
+    }
+  };
+
+  const handleTogglePinned = async () => {
+    if (!topic) return;
+    try {
+      const response = await authFetch(`${API_URL}/topics/${topicId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pinned: !topic.pinned }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.error || 'Eroare la schimbarea stării subiectului.');
+        return;
+      }
+      setTopic((prev) => (prev ? { ...prev, pinned: !prev.pinned } : prev));
+    } catch (e) {
+      alert('Eroare de conexiune.');
+    }
+  };
+
+  const handleDeleteTopic = async () => {
+    if (!topic) return;
+    if (!window.confirm('Sigur vrei să ștergi acest subiect? Toate mesajele vor fi șterse.')) return;
+    try {
+      const response = await authFetch(`${API_URL}/topics/${topicId}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.error || 'Eroare la ștergerea subiectului.');
+        return;
+      }
+      if (topic.category?.id) {
+        navigate(`/forum/category/${topic.category.id}`);
+      } else {
+        navigate('/forum');
+      }
+    } catch (e) {
+      alert('Eroare de conexiune.');
+    }
+  };
+
+  const isTopicOwner = user && topic && topic.author && topic.author.id === user.id;
+
   if (loading) {
     return (
       <div className="topic-page">
@@ -184,7 +249,38 @@ const Topic = () => {
           </span>
           <span>•</span>
           <span>{formatDate(topic.createdAt)}</span>
+          {topic.closed && <span className="topic-state-badge closed">Subiect închis</span>}
+          {topic.pinned && <span className="topic-state-badge pinned">Subiect fixat</span>}
         </div>
+        {(isTopicOwner || isModerator) && (
+          <div className="topic-actions">
+            {isModerator && (
+              <>
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={handleTogglePinned}
+                >
+                  {topic.pinned ? 'Debifează' : 'Fixează'}
+                </button>
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={handleToggleClosed}
+                >
+                  {topic.closed ? 'Redeschide' : 'Închide subiectul'}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              className="action-btn delete"
+              onClick={handleDeleteTopic}
+            >
+              Șterge subiectul
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="posts-list">
@@ -272,6 +368,30 @@ const Topic = () => {
           </div>
         ))}
       </div>
+
+      {pagination && pagination.pages > 1 && (
+        <div className="pagination">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            ← Pagina anterioară
+          </button>
+          <span className="pagination-info">
+            Pagina {pagination.page} din {pagination.pages}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={page >= pagination.pages}
+            onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
+          >
+            Pagina următoare →
+          </button>
+        </div>
+      )}
 
       {isAuthenticated && !topic.closed ? (
         <div className="new-post-form-container">

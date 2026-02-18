@@ -18,11 +18,13 @@ const Category = () => {
   const [newTopicContent, setNewTopicContent] = useState('');
   const [showNewTopicForm, setShowNewTopicForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await authFetch(`${API_URL}/categories/${categoryId}/topics`);
+        const response = await authFetch(`${API_URL}/categories/${categoryId}/topics?page=${page}`);
         const data = await response.json();
         if (!response.ok) {
           setError(data.error || 'Eroare la încărcarea subiectelor.');
@@ -30,14 +32,16 @@ const Category = () => {
         }
         setCategory(data.category);
         setTopics(data.topics || []);
+        setPagination(data.pagination || null);
       } catch (e) {
         setError('Eroare de conexiune la server.');
       } finally {
         setLoading(false);
       }
     };
+    setLoading(true);
     load();
-  }, [categoryId]);
+  }, [categoryId, page]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';
@@ -211,6 +215,30 @@ const Category = () => {
           )}
         </div>
       </div>
+
+      {pagination && pagination.pages > 1 && (
+        <div className="pagination">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            ← Pagina anterioară
+          </button>
+          <span className="pagination-info">
+            Pagina {pagination.page} din {pagination.pages}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={page >= pagination.pages}
+            onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
+          >
+            Pagina următoare →
+          </button>
+        </div>
+      )}
     </div>
   );
 };

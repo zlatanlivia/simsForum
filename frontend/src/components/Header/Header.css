@@ -29,6 +29,11 @@
   transition: transform 0.2s;
 }
 
+.logo-text {
+  font-family: 'Righteous', cursive;
+  letter-spacing: 0.02em;
+}
+
 .logo:hover {
   transform: scale(1.05);
 }

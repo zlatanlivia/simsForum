@@ -6,6 +6,9 @@ import './Topic.css';
 
 const API_URL = 'http://localhost:5001/api';
 
+// Persistă între remontări (Strict Mode / navigare) – o vizualizare per subiect per sesiune tab
+const viewedTopicIdsInSession = new Set();
+
 const Topic = () => {
   const { topicId } = useParams();
   const navigate = useNavigate();
@@ -29,7 +32,12 @@ const Topic = () => {
         setError(data.error || 'Eroare la încărcarea subiectului.');
         return;
       }
-      setTopic(data.topic);
+      const t = data.topic || {};
+      setTopic({
+        ...t,
+        pinned: !!t.pinned,
+        closed: !!t.closed,
+      });
       setPosts(data.posts || []);
       setPagination(data.pagination || null);
     } catch (e) {
@@ -43,6 +51,21 @@ const Topic = () => {
     setLoading(true);
     loadTopic(page);
   }, [topicId, page]);
+
+  // Înregistrare vizualizare o singură dată per subiect (Set la nivel de modul = persistă la remont)
+  useEffect(() => {
+    if (!topicId || !topic) return;
+    if (viewedTopicIdsInSession.has(topicId)) return;
+    viewedTopicIdsInSession.add(topicId);
+    fetch(`${API_URL}/topics/${topicId}/view`, { method: 'POST' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && typeof data.views === 'number') {
+          setTopic((prev) => (prev ? { ...prev, views: data.views } : prev));
+        }
+      })
+      .catch(() => {});
+  }, [topicId, topic]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';

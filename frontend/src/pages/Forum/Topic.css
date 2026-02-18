@@ -46,6 +46,23 @@
   text-decoration: underline;
 }
 
+.topic-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.topic-actions .action-btn:not(.delete) {
+  color: #1565C0;
+  border-color: #1565C0;
+}
+
+.topic-actions .action-btn:not(.delete):hover {
+  background: #e3f2fd;
+  border-color: #1565C0;
+}
+
 .posts-list {
   display: flex;
   flex-direction: column;
@@ -239,6 +256,12 @@
 .edit-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.edit-actions .btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
 }
 
 .new-post-form-container {

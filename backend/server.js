@@ -672,10 +672,6 @@ app.get('/api/topics/:topicId', optionalAuth, (req, res) => {
     };
   });
 
-  // Increment views (simplu, fără lock)
-  topic.views = (topic.views || 0) + 1;
-  saveJson(TOPICS_FILE, topics);
-
   return res.json({
     success: true,
     topic: {
@@ -685,11 +681,45 @@ app.get('/api/topics/:topicId', optionalAuth, (req, res) => {
       author: author ? toSafeUser(author) : null,
       createdAt: topic.createdAt,
       closed: !!topic.closed,
+      pinned: !!topic.pinned,
       views: topic.views || 0,
     },
     posts: postsWithAuthor,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
+});
+
+// Înregistrare vizualizare – deduplicare în backend (max 1 view per topic per viewer la 2 min)
+const recentViews = new Map();
+const VIEW_COOLDOWN_MS = 2 * 60 * 1000;
+
+const getViewerKey = (req) => {
+  if (req.user && req.user.id != null) return `u:${req.user.id}`;
+  return `ip:${req.ip || req.socket?.remoteAddress || 'unknown'}`;
+};
+
+app.post('/api/topics/:topicId/view', optionalAuth, (req, res) => {
+  const { topicId } = req.params;
+  const tid = String(topicId);
+  const viewer = getViewerKey(req);
+
+  const topics = loadTopics();
+  const topic = topics.find((t) => t.id === parseInt(topicId, 10));
+  if (!topic) {
+    return res.status(404).json({ success: false, error: 'Subiectul nu există.' });
+  }
+
+  const now = Date.now();
+  const key = `${tid}:${viewer}`;
+  const last = recentViews.get(key);
+  if (last != null && now - last < VIEW_COOLDOWN_MS) {
+    return res.json({ success: true, views: topic.views || 0 });
+  }
+  recentViews.set(key, now);
+
+  topic.views = (topic.views || 0) + 1;
+  saveJson(TOPICS_FILE, topics);
+  return res.json({ success: true, views: topic.views });
 });
 
 // Editare subiect (titlu, pinned/closed)

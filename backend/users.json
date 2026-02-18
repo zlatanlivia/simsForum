@@ -56,5 +56,26 @@
         "earnedAt": "2026-01-30T15:30:38.481Z"
       }
     ]
+  },
+  {
+    "id": 1771438770192,
+    "email": "zl@gmail.com",
+    "username": "Laura",
+    "password": "$2b$10$T7e7JuPPw3XaUn73Lp9BxepT2iVB3RKBYptmGmQjchKSWC1YDEQja",
+    "nickname": "Laura",
+    "role": "Moderator",
+    "joinedDate": "2026-02-18T18:19:30.192Z",
+    "avatar": null,
+    "about": "",
+    "achievements": [
+      {
+        "name": "Primul mesaj",
+        "earnedAt": "2026-02-18T18:35:53.760Z"
+      },
+      {
+        "name": "Primul subiect",
+        "earnedAt": "2026-02-18T18:35:53.760Z"
+      }
+    ]
   }
 ]

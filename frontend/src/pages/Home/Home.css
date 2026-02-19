@@ -319,6 +319,16 @@
   font-size: 1.8rem;
 }
 
+.game-sections .section-title {
+  background: #2C3E50;
+  color: #ffffff;
+  display: inline-block;
+  padding: 0.7rem 26rem;
+  border-radius: 12px;
+  margin-top: 1rem;
+ 
+}
+
 /* Features Section */
 .features {
   margin-bottom: 4rem;
